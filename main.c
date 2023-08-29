@@ -1,45 +1,62 @@
 #include "monty.h"
-bus_t bus = {NULL, NULL, NULL, 0};
-/**
-* main - monty code interpreter
-* @argc: number of arguments
-* @argv: monty file location
-* Return: 0 on success
-*/
+#include <stdio.h>
+#include <stdlib.h>
+
 int main(int argc, char *argv[])
 {
-	char *content;
-	FILE *file;
-	size_t size = 0;
-	ssize_t read_line = 1;
-	stack_t *stack = NULL;
-	unsigned int counter = 0;
+    if (argc != 2)
+    {
+        fprintf(stderr, "USAGE: monty file\n");
+        return EXIT_FAILURE;
+    }
 
-	if (argc != 2)
-	{
-		fprintf(stderr, "USAGE: monty file\n");
-		exit(EXIT_FAILURE);
-	}
-	file = fopen(argv[1], "r");
-	bus.file = file;
-	if (!file)
-	{
-		fprintf(stderr, "Error: Can't open file %s\n", argv[1]);
-		exit(EXIT_FAILURE);
-	}
-	while (read_line > 0)
-	{
-		content = NULL;
-		read_line = getline(&content, &size, file);
-		bus.content = content;
-		counter++;
-		if (read_line > 0)
-		{
-			execute(content, &stack, counter, file);
-		}
-		free(content);
-	}
-	free_stack(stack);
-	fclose(file);
-return (0);
+    FILE *file = fopen(argv[1], "r");
+    if (!file)
+    {
+        fprintf(stderr, "Error: Can't open file %s\n", argv[1]);
+        return EXIT_FAILURE;
+    }
+
+    stack_t *stack = NULL; // Initialize the stack
+
+    char *line = NULL;
+    size_t len = 0;
+    unsigned int line_number = 0;
+
+    while (getline(&line, &len, file) != -1)
+    {
+        line_number++;
+
+        // Tokenize the line to get the opcode and argument
+        char *data[2];
+        data[0] = strtok(line, " \t\n");
+        if (!data[0] || data[0][0] == '#')
+            continue; // Skip empty lines and comments
+        data[1] = strtok(NULL, " \t\n");
+
+        // Find the corresponding opcode function
+        // and execute it with the stack and line number
+        if (strcmp(data[0], "push") == 0)
+        {
+            opcode_push(&stack, line_number);
+        }
+        else if (strcmp(data[0], "pall") == 0)
+        {
+            opcode_pall(&stack, line_number);
+        }
+        else
+        {
+            fprintf(stderr, "L%u: unknown instruction %s\n", line_number, data[0]);
+            fclose(file);
+            free(line);
+            return EXIT_FAILURE;
+        }
+    }
+
+    // Clean up and close the file
+    fclose(file);
+    free(line);
+
+    return EXIT_SUCCESS;
 }
+
